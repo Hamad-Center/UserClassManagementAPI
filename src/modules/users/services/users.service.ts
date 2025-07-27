@@ -1,119 +1,156 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { CreateUserDto } from '../dto/create-user.dto';
-import { UpdateUserDto } from '../dto/update-user.dto';
+import { User, CreateUserDto, UpdateUserDto } from '../interfaces/user.interface';
+import { UserRole } from '../entities/user-role.enum';
+import * as bcrypt from 'bcrypt';
+
+type UserWithoutPassword = Omit<User, 'password'>;
 
 @Injectable()
 export class UsersService {
-    private users = [
+    private users: User[] = [
         {
             id: 1,
-            name: "Leanne Graham",
-            email: "Sincere@april.biz",
-            role: "INTERN",
+            email: 'admin@example.com',
+            password: bcrypt.hashSync('admin123', 10),
+            firstName: 'Admin',
+            lastName: 'User',
+            roles: [UserRole.ADMIN],
+            phoneNumber: '+1234567890',
+            department: 'IT',
+            createdAt: new Date(),
+            updatedAt: new Date(),
         },
         {
             id: 2,
-            name: "Ervin Howell",
-            email: "Shanna@melissa.tv",
-            role: "ADMIN",
+            email: 'engineer@example.com',
+            password: bcrypt.hashSync('engineer123', 10),
+            firstName: 'Engineer',
+            lastName: 'User',
+            roles: [UserRole.ENGINEER],
+            phoneNumber: '+1234567891',
+            department: 'Engineering',
+            createdAt: new Date(),
+            updatedAt: new Date(),
         },
         {
             id: 3,
-            name: "Clementine Bauch",
-            email: "Nathan@yesenia.net",
-            role: "ENGINEER",
-        },
-        {
-            id: 4,
-            name: "Patricia Lebsack",
-            email: "Julianne.OConner@kory.org",
-            role: "ENGINEER",
-        },
-        {
-            id: 5,
-            name: "Chelsey Dietrich",
-            email: "Lucio_Hettinger@annie.ca",
-            role: "INTERN",
-        },
-        {
-            id: 6,
-            name: "Mrs. Dennis Schulist",
-            email: "Karley_Dach@jasper.info",
-            role: "ENGINEER",
-        },
-        {
-            id: 7,
-            name: "Kurtis Weissnat",
-            email: "Telly.Hoeger@billy.biz",
-            role: "ADMIN",
-        },
-        {
-            id: 8,
-            name: "Nicholas Runolfsdottir V",
-            email: "Sherwood@rosamond.me",
-            role: "ADMIN",
-        },
-        {
-            id: 9,
-            name: "Glenna Reichert",
-            email: "Chaim_McDermott@dana.io",
-            role: "ENGINEER",
-        },
-        {
-            id: 10,
-            name: "Clementina DuBuque",
-            email: "Rey.Padberg@karina.biz",
-            role: "INTERN",
-        },
+            email: 'intern@example.com',
+            password: bcrypt.hashSync('intern123', 10),
+            firstName: 'Intern',
+            lastName: 'User',
+            roles: [UserRole.INTERN],
+            phoneNumber: '+1234567892',
+            department: 'Internship',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        }
     ];
 
-    findAll(role?: 'INTERN' | 'ADMIN' | 'ENGINEER') {
+    async findAll(role?: UserRole): Promise<UserWithoutPassword[]> {
         if (role) {
-            const rolesArray = this.users.filter((user) => user.role.toLowerCase() === role.toLowerCase());
-            if (rolesArray.length === 0)
-                throw new NotFoundException('user role not found');
-            return rolesArray;
-        }
-        return this.users;
-    }
-
-    findOne(id: number) {
-        const user = this.users.find((user) => user.id === id);
-        if (!user) {
-            throw new NotFoundException('User not found');
-        }
-        return this.users.find(user => user.id === id);
-    }
-
-    create(createUserDto: CreateUserDto) {
-        const userByHighestId = [...this.users].sort((a, b) => b.id - a.id)[0];
-        const newUser = {
-            id: userByHighestId.id + 1,
-            ...createUserDto,
-        };
-        this.users.push(newUser);
-        return newUser;
-    }
-
-    update(id: number, updateUserDto: UpdateUserDto) {
-        this.users = this.users.map((user) => {
-            if (user.id === id) {
-                return {
-                    ...user,
-                    ...updateUserDto,
-                }
+            const usersWithRole = this.users.filter(user => user.roles.includes(role));
+            if (usersWithRole.length === 0) {
+                throw new NotFoundException(`No users found with role: ${role}`);
             }
-            return user;
-        })
-        return this.findOne(id); // return the updated user with the updated id
+            return usersWithRole.map(({ password, ...user }) => user);
+        }
+        return this.users.map(({ password, ...user }) => user);
     }
 
-    delete(id: number) {
-        const removedUser = this.findOne(id);
-        if (!removedUser) {
-            throw new NotFoundException('User not found');
+    async findOne(id: number): Promise<UserWithoutPassword> {
+        const user = this.users.find(user => user.id === id);
+        if (!user) {
+            throw new NotFoundException(`User with ID ${id} not found`);
         }
-        this.users = this.users.filter((user) => user.id !== id); // exclude the removed user
-        return removedUser;
+        const { password, ...result } = user;
+        return result;
     }
-} 
+
+    async findByEmail(email: string): Promise<User | undefined> {
+        return this.users.find(user => user.email === email);
+    }
+
+    async validateUser(email: string, password: string): Promise<UserWithoutPassword | null> {
+        const user = await this.findByEmail(email);
+        if (user && user.password && (await bcrypt.compare(password, user.password))) {
+            const { password, ...result } = user;
+            return result;
+        }
+        return null;
+    }
+
+    async create(createUserDto: CreateUserDto): Promise<UserWithoutPassword> {
+        // Check if user with email already exists
+        const existingUser = await this.findByEmail(createUserDto.email);
+        if (existingUser) {
+            throw new BadRequestException('Email already in use');
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+        
+        // Create new user
+        const newUser: User = {
+            id: Math.max(...this.users.map(user => user.id), 0) + 1,
+            ...createUserDto,
+            password: hashedPassword,
+            roles: createUserDto.roles || [UserRole.USER],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        };
+
+        this.users.push(newUser);
+        
+        // Return user without password
+        const { password, ...result } = newUser;
+        return result;
+    }
+
+    async update(id: number, updateUserDto: UpdateUserDto): Promise<UserWithoutPassword> {
+        const userIndex = this.users.findIndex(user => user.id === id);
+        if (userIndex === -1) {
+            throw new NotFoundException(`User with ID ${id} not found`);
+        }
+
+        // Check if email is being updated and already exists
+        if (updateUserDto.email && updateUserDto.email !== this.users[userIndex].email) {
+            const emailExists = this.users.some(user => user.email === updateUserDto.email);
+            if (emailExists) {
+                throw new BadRequestException('Email already in use');
+            }
+        }
+
+        // Hash new password if provided
+        let hashedPassword = this.users[userIndex].password;
+        if (updateUserDto.password) {
+            hashedPassword = await bcrypt.hash(updateUserDto.password, 10);
+        }
+
+        // Update user
+        const updatedUser = {
+            ...this.users[userIndex],
+            ...updateUserDto,
+            password: hashedPassword,
+            updatedAt: new Date(),
+        };
+
+        // Ensure roles is an array and remove duplicates
+        if (updateUserDto.roles) {
+            updatedUser.roles = [...new Set(updateUserDto.roles)];
+        }
+
+        this.users[userIndex] = updatedUser;
+        
+        // Return user without password
+        const { password, ...result } = updatedUser;
+        return result;
+    }
+
+    async remove(id: number): Promise<void> {
+        const userIndex = this.users.findIndex(user => user.id === id);
+        if (userIndex === -1) {
+            throw new NotFoundException(`User with ID ${id} not found`);
+        }
+        this.users.splice(userIndex, 1);
+    }
+}

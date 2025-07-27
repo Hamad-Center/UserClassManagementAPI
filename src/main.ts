@@ -1,9 +1,12 @@
-// src/main.ts (CORRECTED VERSION)
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
+
+
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,7 +16,7 @@ async function bootstrap() {
   const redisPortStr = configService.get<string>('REDIS_PORT', '6379');
   const redisPort = parseInt(redisPortStr, 10);
 
-  console.log('🔧 [Microservice] Redis Config:', {
+  console.log('[Microservice] Redis Config:', {
     host: redisHost,
     port: redisPort,
     portString: redisPortStr,
@@ -40,6 +43,15 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  app.use(helmet());
+
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+  });
+
+  app.use(limiter);
 
   try {
     await app.startAllMicroservices();

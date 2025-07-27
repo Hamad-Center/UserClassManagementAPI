@@ -3,15 +3,116 @@
         "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         "name": "User Class Management API - PC-268",
         "description": "# User Class Management API\n\nThis collection contains all endpoints for the NestJS Microservices Demo Application focusing on User Class Management.\n\n## Architecture\n- **3-Layer Architecture**: Controllers → Services → Repositories\n- **Domain**: User Class Management with business rules\n- **Business Logic**: Users can be assigned to classes with capacity limits and validation\n\n## Features\n- User management with role-based filtering\n- Class management with capacity control\n- User-class assignments with business rules\n- Batch processing for bulk operations\n- Comprehensive validation and error handling\n\n## Business Rules\n- Classes have capacity limits that cannot be exceeded\n- Users cannot be assigned to the same class twice\n- Batch operations are limited to 1000 assignments\n- Classes with active assignments cannot be deleted\n- Assignment status is tracked (ACTIVE/INACTIVE)\n\n## Environment Variables\nMake sure to import the environment file and select the appropriate environment (Local Development).",
-        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "variable": [
+            {
+                "key": "jwt_token",
+                "value": "",
+                "type": "string"
+            }
+        ]
     },
     "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const jsonData = pm.response.json();",
+                                    "pm.collectionVariables.set(\"jwt_token\", jsonData.access_token);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"admin123\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Authenticate a user with email and password to receive a JWT token.\n\n**Request Body:**\n- `email`: User's email (required, must be valid email)\n- `password`: User's password (required, min 8 chars, must contain uppercase, lowercase and number)\n\n**Response:**\n- `access_token`: JWT token to be used in Authorization header for protected routes"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Register",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"new.user@example.com\",\n    \"password\": \"Password123\",\n    \"firstName\": \"New\",\n    \"lastName\": \"User\",\n    \"phoneNumber\": \"+1234567890\",\n    \"department\": \"Engineering\",\n    \"roles\": [\"USER\"]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "register"
+                            ]
+                        },
+                        "description": "Register a new user account.\n\n**Request Body:**\n- `email`: User's email (required, must be unique, valid email)\n- `password`: User's password (required, min 8 chars, must contain uppercase, lowercase and number)\n- `firstName`: User's first name (required)\n- `lastName`: User's last name (required)\n- `phoneNumber`: User's phone number (optional, must be valid format)\n- `department`: User's department (optional)\n- `roles`: Array of user roles (optional, defaults to [\"USER\"])\n\n**Response:**\n- Success: 201 Created with user details (password is excluded)\n- Error: 400 Bad Request if validation fails or email already exists"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Authentication endpoints."
+        },
         {
             "name": "User Management",
             "item": [
                 {
                     "name": "Get All Users",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{jwt_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "GET",
                         "header": [],
                         "url": {
@@ -25,34 +126,21 @@
                         },
                         "description": "Retrieve all users in the system. Optionally filter by role using query parameter.\n\n**Query Parameters:**\n- `role` (optional): Filter by user role (INTERN, ADMIN, ENGINEER)\n\n**Example:**\n- `/users` - Get all users\n- `/users?role=ADMIN` - Get only admin users"
                     },
-                    "response": [
-                        {
-                            "name": "Success - All Users",
-                            "originalRequest": {
-                                "method": "GET",
-                                "header": [],
-                                "url": {
-                                    "raw": "{{baseUrl}}/users",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users"
-                                    ]
-                                }
-                            },
-                            "status": "OK",
-                            "code": 200,
-                            "_postman_previewlanguage": "json",
-                            "header": [],
-                            "cookie": [],
-                            "body": "[\n  {\n    \"id\": 1,\n    \"name\": \"Leanne Graham\",\n    \"email\": \"Sincere@april.biz\",\n    \"role\": \"INTERN\"\n  },\n  {\n    \"id\": 2,\n    \"name\": \"Ervin Howell\",\n    \"email\": \"Shanna@melissa.tv\",\n    \"role\": \"ADMIN\"\n  }\n]"
-                        }
-                    ]
+                    "response": []
                 },
                 {
                     "name": "Get Users by Role",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{jwt_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "GET",
                         "header": [],
                         "url": {
@@ -72,11 +160,22 @@
                             ]
                         },
                         "description": "Get users filtered by their role. Valid roles are:\n- INTERN\n- ADMIN\n- ENGINEER"
-                    }
+                    },
+                    "response": []
                 },
                 {
                     "name": "Get User by ID",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{jwt_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "GET",
                         "header": [],
                         "url": {
@@ -91,68 +190,31 @@
                         },
                         "description": "Retrieve a specific user by their ID.\n\n**Path Parameters:**\n- `userId`: The ID of the user to retrieve"
                     },
-                    "response": [
-                        {
-                            "name": "Success",
-                            "originalRequest": {
-                                "method": "GET",
-                                "header": [],
-                                "url": {
-                                    "raw": "{{baseUrl}}/users/1",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "1"
-                                    ]
-                                }
-                            },
-                            "status": "OK",
-                            "code": 200,
-                            "_postman_previewlanguage": "json",
-                            "header": [],
-                            "cookie": [],
-                            "body": "{\n  \"id\": 1,\n  \"name\": \"Leanne Graham\",\n  \"email\": \"Sincere@april.biz\",\n  \"role\": \"INTERN\"\n}"
-                        },
-                        {
-                            "name": "User Not Found",
-                            "originalRequest": {
-                                "method": "GET",
-                                "header": [],
-                                "url": {
-                                    "raw": "{{baseUrl}}/users/999",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users",
-                                        "999"
-                                    ]
-                                }
-                            },
-                            "status": "Not Found",
-                            "code": 404,
-                            "_postman_previewlanguage": "json",
-                            "header": [],
-                            "cookie": [],
-                            "body": "{\n  \"statusCode\": 404,\n  \"message\": \"User not found\",\n  \"error\": \"Not Found\"\n}"
-                        }
-                    ]
+                    "response": []
                 },
                 {
                     "name": "Create User",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{jwt_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
+                        "header": [],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"name\": \"{{$randomFullName}}\",\n  \"email\": \"{{$randomEmail}}\",\n  \"role\": \"ENGINEER\"\n}"
+                            "raw": "{\n  \"name\": \"{{$randomFullName}}\",\n  \"email\": \"{{$randomEmail}}\",\n  \"role\": \"ENGINEER\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
                         },
                         "url": {
                             "raw": "{{baseUrl}}/users",
@@ -165,53 +227,31 @@
                         },
                         "description": "Create a new user in the system.\n\n**Request Body:**\n- `name` (required): User's full name\n- `email` (required): Valid email address\n- `role` (required): User role - must be INTERN, ADMIN, or ENGINEER\n\n**Validation Rules:**\n- Name cannot be empty\n- Email must be valid format\n- Role is automatically converted to uppercase\n- Role must be one of the allowed values"
                     },
-                    "response": [
-                        {
-                            "name": "Success",
-                            "originalRequest": {
-                                "method": "POST",
-                                "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    }
-                                ],
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"role\": \"ENGINEER\"\n}"
-                                },
-                                "url": {
-                                    "raw": "{{baseUrl}}/users",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "users"
-                                    ]
-                                }
-                            },
-                            "status": "Created",
-                            "code": 201,
-                            "_postman_previewlanguage": "json",
-                            "header": [],
-                            "cookie": [],
-                            "body": "{\n  \"id\": 11,\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"role\": \"ENGINEER\"\n}"
-                        }
-                    ]
+                    "response": []
                 },
                 {
                     "name": "Update User",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{jwt_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "PATCH",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
+                        "header": [],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"name\": \"Updated Name\",\n  \"role\": \"ADMIN\"\n}"
+                            "raw": "{\n  \"name\": \"Updated Name\",\n  \"role\": \"ADMIN\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
                         },
                         "url": {
                             "raw": "{{baseUrl}}/users/{{userId}}",
@@ -224,11 +264,22 @@
                             ]
                         },
                         "description": "Update an existing user's information. All fields are optional.\n\n**Path Parameters:**\n- `userId`: The ID of the user to update\n\n**Request Body:** (all optional)\n- `name`: New name for the user\n- `email`: New email address\n- `role`: New role (INTERN, ADMIN, ENGINEER)"
-                    }
+                    },
+                    "response": []
                 },
                 {
                     "name": "Delete User",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{jwt_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "DELETE",
                         "header": [],
                         "url": {
@@ -242,7 +293,8 @@
                             ]
                         },
                         "description": "Delete a user from the system.\n\n**Path Parameters:**\n- `userId`: The ID of the user to delete\n\n**Note:** This will also affect any class assignments for this user."
-                    }
+                    },
+                    "response": []
                 }
             ],
             "description": "User management endpoints for CRUD operations with role-based functionality."
@@ -251,67 +303,18 @@
             "name": "Class Management",
             "item": [
                 {
-                    "name": "Get All Classes",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/classes",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "classes"
-                            ]
-                        },
-                        "description": "Retrieve all classes in the system with their capacity information."
-                    },
-                    "response": [
-                        {
-                            "name": "Success",
-                            "originalRequest": {
-                                "method": "GET",
-                                "header": [],
-                                "url": {
-                                    "raw": "{{baseUrl}}/classes",
-                                    "host": [
-                                        "{{baseUrl}}"
-                                    ],
-                                    "path": [
-                                        "classes"
-                                    ]
-                                }
-                            },
-                            "status": "OK",
-                            "code": 200,
-                            "_postman_previewlanguage": "json",
-                            "header": [],
-                            "cookie": [],
-                            "body": "[\n  {\n    \"id\": 1,\n    \"name\": \"Advanced TypeScript Development\",\n    \"capacity\": 25,\n    \"description\": \"Learn advanced TypeScript patterns\",\n    \"createdAt\": \"2025-01-01T00:00:00.000Z\",\n    \"updatedAt\": \"2025-01-01T00:00:00.000Z\"\n  }\n]"
-                        }
-                    ]
-                },
-                {
-                    "name": "Get Class by ID",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/classes/{{classId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "classes",
-                                "{{classId}}"
-                            ]
-                        },
-                        "description": "Retrieve a specific class by its ID.\n\n**Path Parameters:**\n- `classId`: The ID of the class to retrieve"
-                    }
-                },
-                {
                     "name": "Create Class",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{jwt_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "POST",
                         "header": [
                             {
@@ -338,6 +341,16 @@
                 {
                     "name": "Update Class",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{jwt_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "PATCH",
                         "header": [
                             {
@@ -365,6 +378,16 @@
                 {
                     "name": "Delete Class",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{jwt_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "DELETE",
                         "header": [],
                         "url": {
@@ -384,7 +407,13 @@
                             "name": "Success",
                             "originalRequest": {
                                 "method": "DELETE",
-                                "header": [],
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{jwt_token}}",
+                                        "type": "text"
+                                    }
+                                ],
                                 "url": {
                                     "raw": "{{baseUrl}}/classes/1",
                                     "host": [
@@ -399,7 +428,13 @@
                             "status": "No Content",
                             "code": 204,
                             "_postman_previewlanguage": null,
-                            "header": [],
+                            "header": [
+                                {
+                                    "key": "Authorization",
+                                    "value": "Bearer {{jwt_token}}",
+                                    "type": "text"
+                                }
+                            ],
                             "cookie": [],
                             "body": null
                         },
@@ -407,7 +442,13 @@
                             "name": "Cannot Delete - Has Active Assignments",
                             "originalRequest": {
                                 "method": "DELETE",
-                                "header": [],
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{jwt_token}}",
+                                        "type": "text"
+                                    }
+                                ],
                                 "url": {
                                     "raw": "{{baseUrl}}/classes/1",
                                     "host": [
@@ -422,7 +463,13 @@
                             "status": "Bad Request",
                             "code": 400,
                             "_postman_previewlanguage": "json",
-                            "header": [],
+                            "header": [
+                                {
+                                    "key": "Authorization",
+                                    "value": "Bearer {{jwt_token}}",
+                                    "type": "text"
+                                }
+                            ],
                             "cookie": [],
                             "body": "{\n  \"statusCode\": 400,\n  \"message\": \"Cannot delete class with active assignments. Please unassign users first.\",\n  \"error\": \"Bad Request\"\n}"
                         }
@@ -437,6 +484,16 @@
                 {
                     "name": "Assign User to Class",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{jwt_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "POST",
                         "header": [
                             {
@@ -489,7 +546,13 @@
                             "status": "Created",
                             "code": 201,
                             "_postman_previewlanguage": "json",
-                            "header": [],
+                            "header": [
+                                {
+                                    "key": "Authorization",
+                                    "value": "Bearer {{jwt_token}}",
+                                    "type": "text"
+                                }
+                            ],
                             "cookie": [],
                             "body": "{\n  \"id\": 1,\n  \"userId\": 1,\n  \"classId\": 1,\n  \"assignedAt\": \"2025-01-15T12:00:00.000Z\",\n  \"status\": \"ACTIVE\"\n}"
                         },
@@ -521,7 +584,13 @@
                             "status": "Bad Request",
                             "code": 400,
                             "_postman_previewlanguage": "json",
-                            "header": [],
+                            "header": [
+                                {
+                                    "key": "Authorization",
+                                    "value": "Bearer {{jwt_token}}",
+                                    "type": "text"
+                                }
+                            ],
                             "cookie": [],
                             "body": "{\n  \"statusCode\": 400,\n  \"message\": \"Class is at full capacity\",\n  \"error\": \"Bad Request\"\n}"
                         }
@@ -530,6 +599,16 @@
                 {
                     "name": "Unassign User from Class",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{jwt_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "DELETE",
                         "header": [],
                         "url": {
@@ -552,6 +631,16 @@
                 {
                     "name": "Get User's Class Assignments",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{jwt_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "GET",
                         "header": [],
                         "url": {
@@ -572,6 +661,16 @@
                 {
                     "name": "Get Class Assignments",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{jwt_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "GET",
                         "header": [],
                         "url": {
@@ -591,6 +690,16 @@
                 {
                     "name": "Batch Assign Users (Async)",
                     "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{jwt_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
                         "method": "POST",
                         "header": [
                             {
@@ -645,7 +754,13 @@
                             "status": "Accepted",
                             "code": 202,
                             "_postman_previewlanguage": "json",
-                            "header": [],
+                            "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                             "cookie": [],
                             "body": "{\n  \"message\": \"Batch accepted for processing\",\n  \"batchId\": \"batch_123456\"\n}"
                         },
@@ -678,7 +793,13 @@
                             "status": "Bad Request",
                             "code": 400,
                             "_postman_previewlanguage": "json",
-                            "header": [],
+                            "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                             "cookie": [],
                             "body": "{\n  \"statusCode\": 400,\n  \"message\": \"Batch size too large\",\n  \"error\": \"Bad Request\"\n}"
                         }
@@ -688,7 +809,13 @@
                     "name": "Clear Completed Batch Jobs",
                     "request": {
                         "method": "DELETE",
-                        "header": [],
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                         "url": {
                             "raw": "{{baseUrl}}/classes/assignments/batch/clear",
                             "host": [
@@ -708,7 +835,13 @@
                             "name": "Success - Jobs Cleared",
                             "originalRequest": {
                                 "method": "DELETE",
-                                "header": [],
+                                "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                                 "url": {
                                     "raw": "{{baseUrl}}/classes/assignments/batch/clear",
                                     "host": [
@@ -725,7 +858,13 @@
                             "status": "OK",
                             "code": 200,
                             "_postman_previewlanguage": "json",
-                            "header": [],
+                            "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                             "cookie": [],
                             "body": "{\n  \"message\": \"Successfully cleared 3 completed jobs\",\n  \"jobsCleared\": 3,\n  \"totalJobsBefore\": 5,\n  \"remainingJobs\": 2,\n  \"operation\": \"clear_completed\"\n}"
                         },
@@ -733,7 +872,13 @@
                             "name": "No Jobs To Clear",
                             "originalRequest": {
                                 "method": "DELETE",
-                                "header": [],
+                                "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                                 "url": {
                                     "raw": "{{baseUrl}}/classes/assignments/batch/clear",
                                     "host": [
@@ -750,7 +895,13 @@
                             "status": "OK",
                             "code": 200,
                             "_postman_previewlanguage": "json",
-                            "header": [],
+                            "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                             "cookie": [],
                             "body": "{\n  \"message\": \"No completed jobs to clear\",\n  \"jobsCleared\": 0,\n  \"totalJobsBefore\": 2,\n  \"remainingJobs\": 2,\n  \"operation\": \"clear_completed\"\n}"
                         }
@@ -760,7 +911,13 @@
                     "name": "Clear Old Batch Jobs (24+ hours)",
                     "request": {
                         "method": "DELETE",
-                        "header": [],
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                         "url": {
                             "raw": "{{baseUrl}}/classes/assignments/batch/clear/old",
                             "host": [
@@ -781,7 +938,13 @@
                             "name": "Old Jobs Cleared",
                             "originalRequest": {
                                 "method": "DELETE",
-                                "header": [],
+                                "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                                 "url": {
                                     "raw": "{{baseUrl}}/classes/assignments/batch/clear/old",
                                     "host": [
@@ -799,7 +962,13 @@
                             "status": "OK",
                             "code": 200,
                             "_postman_previewlanguage": "json",
-                            "header": [],
+                            "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                             "cookie": [],
                             "body": "{\n  \"message\": \"Successfully cleared 2 old jobs\",\n  \"jobsCleared\": 2,\n  \"totalJobsBefore\": 5,\n  \"remainingJobs\": 3,\n  \"operation\": \"clear_old\"\n}"
                         },
@@ -807,7 +976,13 @@
                             "name": "No Old Jobs",
                             "originalRequest": {
                                 "method": "DELETE",
-                                "header": [],
+                                "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                                 "url": {
                                     "raw": "{{baseUrl}}/classes/assignments/batch/clear/old",
                                     "host": [
@@ -825,7 +1000,13 @@
                             "status": "OK",
                             "code": 200,
                             "_postman_previewlanguage": "json",
-                            "header": [],
+                            "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                             "cookie": [],
                             "body": "{\n  \"message\": \"No old jobs to clear (older than 24 hours)\",\n  \"jobsCleared\": 0,\n  \"totalJobsBefore\": 3,\n  \"remainingJobs\": 3,\n  \"operation\": \"clear_old\"\n}"
                         }
@@ -835,7 +1016,13 @@
                     "name": "Clear All Batch Jobs (Testing)",
                     "request": {
                         "method": "DELETE",
-                        "header": [],
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                         "url": {
                             "raw": "{{baseUrl}}/classes/assignments/batch/clear/all",
                             "host": [
@@ -856,7 +1043,13 @@
                             "name": "All Jobs Cleared",
                             "originalRequest": {
                                 "method": "DELETE",
-                                "header": [],
+                                "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                                 "url": {
                                     "raw": "{{baseUrl}}/classes/assignments/batch/clear/all",
                                     "host": [
@@ -874,7 +1067,13 @@
                             "status": "OK",
                             "code": 200,
                             "_postman_previewlanguage": "json",
-                            "header": [],
+                            "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                             "cookie": [],
                             "body": "{\n  \"message\": \"Successfully cleared all 5 jobs\",\n  \"jobsCleared\": 5,\n  \"totalJobsBefore\": 5,\n  \"remainingJobs\": 0,\n  \"operation\": \"clear_all\"\n}"
                         },
@@ -882,7 +1081,13 @@
                             "name": "No Jobs To Clear",
                             "originalRequest": {
                                 "method": "DELETE",
-                                "header": [],
+                                "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                                 "url": {
                                     "raw": "{{baseUrl}}/classes/assignments/batch/clear/all",
                                     "host": [
@@ -900,7 +1105,13 @@
                             "status": "OK",
                             "code": 200,
                             "_postman_previewlanguage": "json",
-                            "header": [],
+                            "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}",
+                                "type": "text"
+                            }
+                        ],
                             "cookie": [],
                             "body": "{\n  \"message\": \"No jobs to clear\",\n  \"jobsCleared\": 0,\n  \"totalJobsBefore\": 0,\n  \"remainingJobs\": 0,\n  \"operation\": \"clear_all\"\n}"
                         }

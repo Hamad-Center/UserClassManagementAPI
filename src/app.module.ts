@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './modules/users/users.module';
 import { ClassesModule } from './modules/classes/classes.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { EventPublisherService } from './common/events/event-publisher.service';
@@ -47,7 +48,8 @@ import { EventPublisherService } from './common/events/event-publisher.service';
         },
         inject: [ConfigService],
       }
-    ])
+    ]),
+    AuthModule
   ],
   controllers: [AppController],
   providers: [
