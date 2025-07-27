@@ -1,6 +1,6 @@
 // src/modules/classes/controllers/class-events.controller.ts (NEW FILE)
 import { Controller, Logger } from '@nestjs/common';
-import { EventPattern, Payload, Ctx, RedisContext } from '@nestjs/microservices';
+import { EventPattern, Payload } from '@nestjs/microservices';
 import { EVENT_PATTERNS } from '../../../common/events/event.patterns';
 import {
     UserAssignedToClassEvent,
@@ -15,7 +15,6 @@ export class ClassEventsController {
     @EventPattern(EVENT_PATTERNS.USER_ASSIGNED_TO_CLASS)
     async handleUserAssignedToClass(
         @Payload() event: UserAssignedToClassEvent,
-        @Ctx() context: RedisContext,
     ) {
         this.logger.log(` Received USER_ASSIGNED_TO_CLASS event`, {
             eventId: event.eventId,
@@ -45,7 +44,6 @@ export class ClassEventsController {
     @EventPattern(EVENT_PATTERNS.BATCH_ASSIGNMENT_STARTED)
     async handleBatchAssignmentStarted(
         @Payload() event: BatchAssignmentStartedEvent,
-        @Ctx() context: RedisContext,
     ) {
         this.logger.log(` Received BATCH_ASSIGNMENT_STARTED event`, {
             eventId: event.eventId,
@@ -73,7 +71,6 @@ export class ClassEventsController {
     @EventPattern(EVENT_PATTERNS.BATCH_ASSIGNMENT_COMPLETED)
     async handleBatchAssignmentCompleted(
         @Payload() event: BatchAssignmentCompletedEvent,
-        @Ctx() context: RedisContext,
     ) {
         this.logger.log(` Received BATCH_ASSIGNMENT_COMPLETED event`, {
             eventId: event.eventId,
