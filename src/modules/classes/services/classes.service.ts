@@ -10,6 +10,9 @@ import { EventPublisherService } from "src/common/events/event-publisher.service
 import { BatchAssignmentCompletedEvent, BatchAssignmentStartedEvent, UserAssignedToClassEvent } from "src/common/events/class-assignment.events";
 import { EVENT_PATTERNS } from "src/common/config/redis.config";
 import { IClassRepository } from '../interfaces/class-repository.interface';
+import { plainToClass } from 'class-transformer';
+import { ClassResponseDto } from '../dto/class-response.dto';
+import { AssignmentResponseDto } from '../dto/assignment-response.dto';
 
 @Injectable()
 export class ClassesService {
@@ -19,28 +22,31 @@ export class ClassesService {
         private readonly eventPublisher: EventPublisherService,
     ) { }
 
-    async create(createClassDto: CreateClassDto): Promise<IClass> {
+    async create(createClassDto: CreateClassDto): Promise<ClassResponseDto> {
         const newClass = await this.classRepository.create(createClassDto);
         console.log('Class created', { classId: newClass.id, context: 'ClassesService' });
-        return newClass;
+        return plainToClass(ClassResponseDto, newClass, { excludeExtraneousValues: true });
     }
 
-    async findAll(): Promise<IClass[]> {
-        return await this.classRepository.findAll();
+    async findAll(): Promise<ClassResponseDto[]> {
+        const classes = await this.classRepository.findAll();
+        return plainToClass(ClassResponseDto, classes, { excludeExtraneousValues: true });
     }
 
-    async findOne(id: number): Promise<IClass> {
+    async findOne(id: number): Promise<ClassResponseDto> {
         try {
-            return await this.classRepository.findOne(id);
+            const classData = await this.classRepository.findOne(id);
+            return plainToClass(ClassResponseDto, classData, { excludeExtraneousValues: true });
         } catch (error) {
             console.error(`the requested info ${id} is not found`, { context: 'ClassesService' });
             throw new NotFoundException(`class with id ${id} is not found...`);
         }
     }
 
-    async update(id: number, updateClassDto: UpdateClassDto): Promise<IClass> {
+    async update(id: number, updateClassDto: UpdateClassDto): Promise<ClassResponseDto> {
         try {
-            return await this.classRepository.update(id, updateClassDto);
+            const updatedClass = await this.classRepository.update(id, updateClassDto);
+            return plainToClass(ClassResponseDto, updatedClass, { excludeExtraneousValues: true });
         } catch (error) {
             throw new NotFoundException(`class with id ${id} is not found`);
         }
@@ -55,7 +61,7 @@ export class ClassesService {
     }
 
     // this is the user class core business logic 
-    async assignUserToClass(assignmentDto: AssignUserToClassDto): Promise<IUserClassAssignment> {
+    async assignUserToClass(assignmentDto: AssignUserToClassDto): Promise<AssignmentResponseDto> {
         try {
             const assignment = await this.classRepository.assignUserToClass(assignmentDto);
 
@@ -72,7 +78,7 @@ export class ClassesService {
 
             await this.eventPublisher.publishEvent(EVENT_PATTERNS.USER_ASSIGNED_TO_CLASS, event);
 
-            return assignment;
+            return plainToClass(AssignmentResponseDto, assignment, { excludeExtraneousValues: true });
         } catch (error) {
             if (error.message.includes('already assigned')) {
                 throw new BadRequestException(error.message);
@@ -92,12 +98,14 @@ export class ClassesService {
         }
     }
 
-    async getUserAssignments(userId: number): Promise<IUserClassAssignment[]> {
-        return await this.classRepository.getUserAssignments(userId);
+    async getUserAssignments(userId: number): Promise<AssignmentResponseDto[]> {
+        const assignments = await this.classRepository.getUserAssignments(userId);
+        return plainToClass(AssignmentResponseDto, assignments, { excludeExtraneousValues: true });
     }
 
-    async getClassAssignments(classId: number): Promise<IUserClassAssignment[]> {
-        return await this.classRepository.getClassAssignments(classId);
+    async getClassAssignments(classId: number): Promise<AssignmentResponseDto[]> {
+        const assignments = await this.classRepository.getClassAssignments(classId);
+        return plainToClass(AssignmentResponseDto, assignments, { excludeExtraneousValues: true });
     }
 
     async processBatchAssignments(batchDto: BatchAssignUsersDto): Promise<IBatchResponse> {

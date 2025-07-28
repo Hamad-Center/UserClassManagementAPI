@@ -30,7 +30,19 @@ export class ClassesRepository implements IClassRepository {
     }
 
     async findAll(): Promise<IClass[]> {
-        const classes = await this.prisma.class.findMany();
+        const classes = await this.prisma.class.findMany({
+            include: {
+                _count: {
+                    select: {
+                        userAssignments: {
+                            where: {
+                                status: 'ACTIVE'
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
         return classes.map(cls => ({
             id: cls.id,
@@ -39,12 +51,24 @@ export class ClassesRepository implements IClassRepository {
             description: cls.description || undefined,
             createdAt: cls.createdAt,
             updatedAt: cls.updatedAt,
+            currentEnrollment: cls._count.userAssignments,
         }));
     }
 
     async findOne(id: number): Promise<IClass> {
         const classItem = await this.prisma.class.findUnique({
             where: { id },
+            include: {
+                _count: {
+                    select: {
+                        userAssignments: {
+                            where: {
+                                status: 'ACTIVE'
+                            }
+                        }
+                    }
+                }
+            }
         });
 
         if (!classItem) {
@@ -58,6 +82,7 @@ export class ClassesRepository implements IClassRepository {
             description: classItem.description || undefined,
             createdAt: classItem.createdAt,
             updatedAt: classItem.updatedAt,
+            currentEnrollment: classItem._count.userAssignments,
         };
     }
 
@@ -69,6 +94,17 @@ export class ClassesRepository implements IClassRepository {
                 capacity: updateClassDto.capacity,
                 description: updateClassDto.description,
             },
+            include: {
+                _count: {
+                    select: {
+                        userAssignments: {
+                            where: {
+                                status: 'ACTIVE'
+                            }
+                        }
+                    }
+                }
+            }
         });
 
         return {
@@ -78,6 +114,7 @@ export class ClassesRepository implements IClassRepository {
             description: updatedClass.description || undefined,
             createdAt: updatedClass.createdAt,
             updatedAt: updatedClass.updatedAt,
+            currentEnrollment: updatedClass._count.userAssignments,
         };
     }
 
@@ -89,20 +126,7 @@ export class ClassesRepository implements IClassRepository {
 
     // User-Class Assignment methods
     async assignUserToClass(assignmentDto: AssignUserToClassDto): Promise<IUserClassAssignment> {
-        // Check if assignment already exists
-        const existingAssignment = await this.prisma.userClassAssignment.findFirst({
-            where: {
-                userId: assignmentDto.userId,
-                classId: assignmentDto.classId,
-                status: 'ACTIVE',
-            },
-        });
-
-        if (existingAssignment) {
-            throw new Error(`User with id ${assignmentDto.userId} is already assigned to this class`);
-        }
-
-        // Check class capacity
+        // Check class capacity first
         const classItem = await this.findOne(assignmentDto.classId);
         const currentAssignments = await this.prisma.userClassAssignment.count({
             where: {
@@ -115,8 +139,19 @@ export class ClassesRepository implements IClassRepository {
             throw new Error('Class is at full capacity');
         }
 
-        const assignment = await this.prisma.userClassAssignment.create({
-            data: {
+        // this is where i use upsert to handle create/update logic automtically
+        const assignment = await this.prisma.userClassAssignment.upsert({
+            where: {
+                unique_user_class_assignment: {
+                    userId: assignmentDto.userId,
+                    classId: assignmentDto.classId,
+                },
+            },
+            update: {
+                status: 'ACTIVE',
+                assignedAt: new Date(),
+            },
+            create: {
                 userId: assignmentDto.userId,
                 classId: assignmentDto.classId,
                 status: assignmentDto.status || 'ACTIVE',
