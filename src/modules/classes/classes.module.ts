@@ -7,6 +7,8 @@ import { ClassEventsController } from './controllers/class-events.controller';
 import { ClassesService } from './services/classes.service';
 import { BatchProcessorService } from './services/batch-processor.service';
 import { EventPublisherService } from '../../common/events/event-publisher.service';
+import { ClassesRepository } from './repositories/classes.repository';
+import { PrismaService } from '../../database/prisma/prisma.service';
 
 @Module({
     imports: [
@@ -44,6 +46,12 @@ import { EventPublisherService } from '../../common/events/event-publisher.servi
         ClassesService,
         BatchProcessorService,
         EventPublisherService,
+        ClassesRepository,
+        PrismaService,
+        {
+            provide: 'IClassRepository',
+            useClass: ClassesRepository,
+        }
     ],
     exports: [ClassesService],
 })

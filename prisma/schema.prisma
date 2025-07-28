@@ -13,9 +13,13 @@ datasource db {
 // User Model - Represents system users with roles
 model User {
   id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(255)
+  firstName String   @map("firstName") @db.VarChar(255)
+  lastName  String   @map("lastName") @db.VarChar(255)
   email     String   @unique @db.VarChar(320)
-  role      UserRole @default(INTERN)
+  password  String   @db.VarChar(255)
+  phoneNumber String? @map("phone_number") @db.VarChar(20)
+  department String? @db.VarChar(255)
+  roles     UserRole[] @default([INTERN])
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -24,7 +28,7 @@ model User {
 
   @@map("users")
   @@index([email])
-  @@index([role])
+  @@index([roles])
 }
 
 // Class Model - Represents educational classes with capacity management
@@ -65,6 +69,7 @@ model UserClassAssignment {
 
 // Enums
 enum UserRole {
+  USER
   INTERN
   ADMIN
   ENGINEER
