@@ -13,7 +13,7 @@ async function main() {
 
     console.log('🗑️  Cleared existing data');
 
-    // Create users
+
     const users = await Promise.all([
         prisma.user.create({
             data: {
@@ -23,7 +23,9 @@ async function main() {
                 password: await bcrypt.hash('admin123', 10),
                 phoneNumber: '+1234567890',
                 department: 'IT',
-                roles: ['ADMIN'],
+                roleAssignments: {
+                    create: [{ role: 'ADMIN' }]
+                }
             }
         }),
         prisma.user.create({
@@ -34,7 +36,9 @@ async function main() {
                 password: await bcrypt.hash('engineer123', 10),
                 phoneNumber: '+1234567891',
                 department: 'Engineering',
-                roles: ['ENGINEER'],
+                roleAssignments: {
+                    create: [{ role: 'ENGINEER' }]
+                }
             }
         }),
         prisma.user.create({
@@ -45,7 +49,9 @@ async function main() {
                 password: await bcrypt.hash('intern123', 10),
                 phoneNumber: '+1234567892',
                 department: 'Internship',
-                roles: ['INTERN'],
+                roleAssignments: {
+                    create: [{ role: 'INTERN' }]
+                }
             }
         }),
         prisma.user.create({
@@ -56,7 +62,9 @@ async function main() {
                 password: await bcrypt.hash('password123', 10),
                 phoneNumber: '+1234567893',
                 department: 'Marketing',
-                roles: ['USER'],
+                roleAssignments: {
+                    create: [{ role: 'USER' }]
+                }
             }
         }),
         prisma.user.create({
@@ -67,7 +75,9 @@ async function main() {
                 password: await bcrypt.hash('password123', 10),
                 phoneNumber: '+1234567894',
                 department: 'Sales',
-                roles: ['USER'],
+                roleAssignments: {
+                    create: [{ role: 'USER' }]
+                }
             }
         }),
     ]);
@@ -75,6 +85,8 @@ async function main() {
     console.log('👥 Created users:', users.length);
 
     // Create classes
+    // Using Promise.all for parallel execution to improve seeding performance
+    // Each class creation is independent and doesn't depend on others
     const classes = await Promise.all([
         prisma.class.create({
             data: {
@@ -116,6 +128,8 @@ async function main() {
     console.log('🏫 Created classes:', classes.length);
 
     // Create user-class assignments
+    // Using Promise.all for parallel execution to improve seeding performance
+    // Each assignment creation is independent and doesn't depend on others
     const assignments = await Promise.all([
         prisma.userClassAssignment.create({
             data: {

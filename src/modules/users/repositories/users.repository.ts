@@ -21,8 +21,15 @@ export class UsersRepository implements IUserRepository {
                 password: hashedPassword,
                 phoneNumber: createUserDto.phoneNumber,
                 department: createUserDto.department,
-                roles: createUserDto.roles || [UserRole.USER],
+                roleAssignments: {
+                    create: (createUserDto.roles || [UserRole.USER]).map(role => ({
+                        role: role
+                    }))
+                }
             },
+            include: {
+                roleAssignments: true
+            }
         });
     }
 
@@ -36,7 +43,11 @@ export class UsersRepository implements IUserRepository {
                 email: true,
                 phoneNumber: true,
                 department: true,
-                roles: true,
+                roleAssignments: {
+                    select: {
+                        role: true
+                    }
+                },
                 createdAt: true,
                 updatedAt: true,
             },
@@ -44,7 +55,9 @@ export class UsersRepository implements IUserRepository {
 
         // Filter by role if specified
         if (role) {
-            return users.filter((user: any) => user.roles.includes(role));
+            return users.filter((user: any) =>
+                user.roleAssignments.some((assignment: any) => assignment.role === role)
+            );
         }
 
         return users;
@@ -60,7 +73,11 @@ export class UsersRepository implements IUserRepository {
                 email: true,
                 phoneNumber: true,
                 department: true,
-                roles: true,
+                roleAssignments: {
+                    select: {
+                        role: true
+                    }
+                },
                 createdAt: true,
                 updatedAt: true,
             },
@@ -81,9 +98,23 @@ export class UsersRepository implements IUserRepository {
         if (updateUserDto.lastName) updateData.lastName = updateUserDto.lastName;
         if (updateUserDto.phoneNumber) updateData.phoneNumber = updateUserDto.phoneNumber;
         if (updateUserDto.department) updateData.department = updateUserDto.department;
-        if (updateUserDto.roles) updateData.roles = updateUserDto.roles;
         if (updateUserDto.password) {
             updateData.password = await bcrypt.hash(updateUserDto.password, 10);
+        }
+
+        // Handle role updates separately
+        if (updateUserDto.roles) {
+            // Delete existing role assignments
+            await this.prisma.userRoleAssignment.deleteMany({
+                where: { userId: id }
+            });
+
+            // Create new role assignments
+            updateData.roleAssignments = {
+                create: updateUserDto.roles.map(role => ({
+                    role: role
+                }))
+            };
         }
 
         return this.prisma.user.update({
@@ -96,7 +127,11 @@ export class UsersRepository implements IUserRepository {
                 email: true,
                 phoneNumber: true,
                 department: true,
-                roles: true,
+                roleAssignments: {
+                    select: {
+                        role: true
+                    }
+                },
                 createdAt: true,
                 updatedAt: true,
             },

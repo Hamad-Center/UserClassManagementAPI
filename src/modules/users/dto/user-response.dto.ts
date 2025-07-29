@@ -21,6 +21,7 @@ export class UserResponseDto {
     department?: string;
 
     @Expose()
+    @Transform(({ obj }) => obj.roleAssignments?.map((assignment: any) => assignment.role) || [])
     roles: UserRole[];
 
     @Expose()

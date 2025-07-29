@@ -1,6 +1,6 @@
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
-import { UserRole } from './user.interface';
+import { UserRole, UserRoleAssignment } from './user.interface';
 
 export interface IUser {
     id: number;
@@ -10,7 +10,7 @@ export interface IUser {
     password?: string;
     phoneNumber?: string;
     department?: string;
-    roles: UserRole[];
+    roleAssignments: UserRoleAssignment[];
     createdAt: Date;
     updatedAt: Date;
 }
