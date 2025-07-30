@@ -3,6 +3,7 @@ export interface IClass {
     name: string;
     capacity: number;
     description?: string;
+    currentEnrollment?: number;
     createdAt: Date;
     updatedAt: Date;
 }

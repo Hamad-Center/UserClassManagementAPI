@@ -13,17 +13,36 @@ datasource db {
 // User Model - Represents system users with roles
 model User {
   id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(255)
+  firstName String   @map("firstName") @db.VarChar(255)
+  lastName  String   @map("lastName") @db.VarChar(255)
   email     String   @unique @db.VarChar(320)
-  role      UserRole @default(INTERN)
+  password  String   @db.VarChar(255)
+  phoneNumber String? @map("phone_number") @db.VarChar(20)
+  department String? @db.VarChar(255)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relationships
+  roleAssignments UserRoleAssignment[]
   classAssignments UserClassAssignment[]
 
   @@map("users")
   @@index([email])
+  @@index([phoneNumber])
+}
+
+// UserRoleAssignment Model - Represents user roles with proper one-to-many relationship
+model UserRoleAssignment {
+  id     Int      @id @default(autoincrement())
+  userId Int      @map("user_id")
+  role   UserRole @map("role")
+  
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, role])
+  @@map("user_role_assignments")
+  @@index([userId])
   @@index([role])
 }
 
@@ -61,10 +80,13 @@ model UserClassAssignment {
   @@index([userId])
   @@index([classId])
   @@index([status])
+  @@index([userId, status])
+  @@index([classId, status])
 }
 
 // Enums
 enum UserRole {
+  USER
   INTERN
   ADMIN
   ENGINEER

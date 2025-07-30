@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('INTERN', 'ADMIN', 'ENGINEER');
+CREATE TYPE "UserRole" AS ENUM ('USER', 'INTERN', 'ADMIN', 'ENGINEER');
 
 -- CreateEnum
 CREATE TYPE "UserClassAssignmentStatus" AS ENUM ('ACTIVE', 'INACTIVE');
@@ -7,9 +7,13 @@ CREATE TYPE "UserClassAssignmentStatus" AS ENUM ('ACTIVE', 'INACTIVE');
 -- CreateTable
 CREATE TABLE "users" (
     "id" SERIAL NOT NULL,
-    "name" VARCHAR(255) NOT NULL,
+    "firstName" VARCHAR(255) NOT NULL,
+    "lastName" VARCHAR(255) NOT NULL,
     "email" VARCHAR(320) NOT NULL,
-    "role" "UserRole" NOT NULL DEFAULT 'INTERN',
+    "password" VARCHAR(255) NOT NULL,
+    "phone_number" VARCHAR(20),
+    "department" VARCHAR(255),
+    "roles" "UserRole"[] DEFAULT ARRAY['INTERN']::"UserRole"[],
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -47,7 +51,7 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 CREATE INDEX "users_email_idx" ON "users"("email");
 
 -- CreateIndex
-CREATE INDEX "users_role_idx" ON "users"("role");
+CREATE INDEX "users_roles_idx" ON "users"("roles");
 
 -- CreateIndex
 CREATE INDEX "classes_name_idx" ON "classes"("name");

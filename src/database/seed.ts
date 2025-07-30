@@ -1,240 +1,201 @@
 import { PrismaClient } from '@prisma/client';
-
-// Note: UserRole will be available after prisma generate
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
     console.log('🌱 Starting database seeding...');
 
-    // Clean existing data
+    // Clear existing data
     await prisma.userClassAssignment.deleteMany();
     await prisma.user.deleteMany();
     await prisma.class.deleteMany();
 
-    console.log('🗑️  Cleaned existing data');
+    console.log('🗑️  Cleared existing data');
 
-    // Create users
+
     const users = await Promise.all([
         prisma.user.create({
             data: {
-                name: 'Leanne Graham',
-                email: 'Sincere@april.biz',
-                role: 'INTERN',
-            },
+                firstName: 'Admin',
+                lastName: 'User',
+                email: 'admin@example.com',
+                password: await bcrypt.hash('admin123', 10),
+                phoneNumber: '+1234567890',
+                department: 'IT',
+                roleAssignments: {
+                    create: [{ role: 'ADMIN' }]
+                }
+            }
         }),
         prisma.user.create({
             data: {
-                name: 'Ervin Howell',
-                email: 'Shanna@melissa.tv',
-                role: 'ADMIN',
-            },
+                firstName: 'Engineer',
+                lastName: 'User',
+                email: 'engineer@example.com',
+                password: await bcrypt.hash('engineer123', 10),
+                phoneNumber: '+1234567891',
+                department: 'Engineering',
+                roleAssignments: {
+                    create: [{ role: 'ENGINEER' }]
+                }
+            }
         }),
         prisma.user.create({
             data: {
-                name: 'Clementine Bauch',
-                email: 'Nathan@yesenia.net',
-                role: 'ENGINEER',
-            },
+                firstName: 'Intern',
+                lastName: 'User',
+                email: 'intern@example.com',
+                password: await bcrypt.hash('intern123', 10),
+                phoneNumber: '+1234567892',
+                department: 'Internship',
+                roleAssignments: {
+                    create: [{ role: 'INTERN' }]
+                }
+            }
         }),
         prisma.user.create({
             data: {
-                name: 'Patricia Lebsack',
-                email: 'Julianne.OConner@kory.org',
-                role: 'ENGINEER',
-            },
+                firstName: 'John',
+                lastName: 'Doe',
+                email: 'john.doe@example.com',
+                password: await bcrypt.hash('password123', 10),
+                phoneNumber: '+1234567893',
+                department: 'Marketing',
+                roleAssignments: {
+                    create: [{ role: 'USER' }]
+                }
+            }
         }),
         prisma.user.create({
             data: {
-                name: 'Chelsey Dietrich',
-                email: 'Lucio_Hettinger@annie.ca',
-                role: 'INTERN',
-            },
-        }),
-        prisma.user.create({
-            data: {
-                name: 'Mrs. Dennis Schulist',
-                email: 'Karley_Dach@jasper.info',
-                role: 'ADMIN',
-            },
-        }),
-        prisma.user.create({
-            data: {
-                name: 'Kurtis Weissnat',
-                email: 'Telly.Hoeger@billy.biz',
-                role: 'ENGINEER',
-            },
-        }),
-        prisma.user.create({
-            data: {
-                name: 'Nicholas Runolfsdottir',
-                email: 'Sherwood@rosamond.me',
-                role: 'INTERN',
-            },
-        }),
-        prisma.user.create({
-            data: {
-                name: 'Glenna Reichert',
-                email: 'Chaim_McDermott@dana.io',
-                role: 'ENGINEER',
-            },
-        }),
-        prisma.user.create({
-            data: {
-                name: 'Clementina DuBuque',
-                email: 'Rey.Padberg@karina.biz',
-                role: 'ADMIN',
-            },
+                firstName: 'Jane',
+                lastName: 'Smith',
+                email: 'jane.smith@example.com',
+                password: await bcrypt.hash('password123', 10),
+                phoneNumber: '+1234567894',
+                department: 'Sales',
+                roleAssignments: {
+                    create: [{ role: 'USER' }]
+                }
+            }
         }),
     ]);
 
-    console.log(`👥 Created ${users.length} users`);
+    console.log('👥 Created users:', users.length);
 
     // Create classes
+    // Using Promise.all for parallel execution to improve seeding performance
+    // Each class creation is independent and doesn't depend on others
     const classes = await Promise.all([
         prisma.class.create({
             data: {
-                name: 'Advanced TypeScript Development',
-                description: 'Learn advanced TypeScript patterns, decorators, and type system features.',
+                name: 'Hand to Hand Combat Sessions',
                 capacity: 25,
+                description: 'This is hardcore training for advanced combat techniques.',
             },
         }),
         prisma.class.create({
             data: {
-                name: 'NestJS Microservices Architecture',
-                description: 'Master microservices architecture using NestJS, Redis, and Docker.',
-                capacity: 20,
-            },
-        }),
-        prisma.class.create({
-            data: {
-                name: 'Database Design with PostgreSQL',
-                description: 'Design scalable database schemas and learn advanced PostgreSQL features.',
+                name: 'Advanced NestJS Development',
                 capacity: 30,
+                description: 'Learn advanced NestJS patterns and microservices architecture.',
             },
         }),
         prisma.class.create({
             data: {
-                name: 'API Security & Authentication',
-                description: 'Implement secure APIs with JWT, OAuth, and best practices.',
-                capacity: 15,
-            },
-        }),
-        prisma.class.create({
-            data: {
-                name: 'Docker & Container Orchestration',
-                description: 'Learn containerization, Docker Compose, and deployment strategies.',
+                name: 'Database Design Principles',
                 capacity: 20,
+                description: 'Master database design, normalization, and optimization.',
+            },
+        }),
+        prisma.class.create({
+            data: {
+                name: 'API Security Best Practices',
+                capacity: 15,
+                description: 'Learn authentication, authorization, and security patterns.',
+            },
+        }),
+        prisma.class.create({
+            data: {
+                name: 'Docker and Containerization',
+                capacity: 18,
+                description: 'Containerize applications with Docker and Kubernetes.',
             },
         }),
     ]);
 
-    console.log(`🏫 Created ${classes.length} classes`);
+    console.log('🏫 Created classes:', classes.length);
 
-    // Create some initial assignments
+    // Create user-class assignments
+    // Using Promise.all for parallel execution to improve seeding performance
+    // Each assignment creation is independent and doesn't depend on others
     const assignments = await Promise.all([
-        // TypeScript class assignments
         prisma.userClassAssignment.create({
             data: {
-                userId: users[0].id, // Leanne (INTERN)
-                classId: classes[0].id, // Advanced TypeScript
+                userId: users[0].id, // Admin user
+                classId: classes[0].id, // Combat class
+                status: 'ACTIVE',
             },
         }),
         prisma.userClassAssignment.create({
             data: {
-                userId: users[2].id, // Clementine (ENGINEER)
-                classId: classes[0].id, // Advanced TypeScript
+                userId: users[1].id, // Engineer user
+                classId: classes[1].id, // NestJS class
+                status: 'ACTIVE',
             },
         }),
         prisma.userClassAssignment.create({
             data: {
-                userId: users[6].id, // Kurtis (ENGINEER)
-                classId: classes[0].id, // Advanced TypeScript
-            },
-        }),
-
-        // NestJS class assignments
-        prisma.userClassAssignment.create({
-            data: {
-                userId: users[3].id, // Patricia (ENGINEER)
-                classId: classes[1].id, // NestJS Microservices
+                userId: users[2].id, // Intern user
+                classId: classes[2].id, // Database class
+                status: 'ACTIVE',
             },
         }),
         prisma.userClassAssignment.create({
             data: {
-                userId: users[8].id, // Glenna (ENGINEER)
-                classId: classes[1].id, // NestJS Microservices
-            },
-        }),
-
-        // Database class assignments
-        prisma.userClassAssignment.create({
-            data: {
-                userId: users[1].id, // Ervin (ADMIN)
-                classId: classes[2].id, // Database Design
+                userId: users[3].id, // John Doe
+                classId: classes[3].id, // Security class
+                status: 'ACTIVE',
             },
         }),
         prisma.userClassAssignment.create({
             data: {
-                userId: users[5].id, // Mrs. Dennis (ADMIN)
-                classId: classes[2].id, // Database Design
+                userId: users[4].id, // Jane Smith
+                classId: classes[4].id, // Docker class
+                status: 'ACTIVE',
+            },
+        }),
+        // Additional assignments for testing
+        prisma.userClassAssignment.create({
+            data: {
+                userId: users[0].id, // Admin also in NestJS class
+                classId: classes[1].id,
+                status: 'ACTIVE',
             },
         }),
         prisma.userClassAssignment.create({
             data: {
-                userId: users[4].id, // Chelsey (INTERN)
-                classId: classes[2].id, // Database Design
-            },
-        }),
-
-        // Security class assignments
-        prisma.userClassAssignment.create({
-            data: {
-                userId: users[9].id, // Clementina (ADMIN)
-                classId: classes[3].id, // API Security
-            },
-        }),
-
-        // Docker class assignments
-        prisma.userClassAssignment.create({
-            data: {
-                userId: users[7].id, // Nicholas (INTERN)
-                classId: classes[4].id, // Docker & Containers
+                userId: users[1].id, // Engineer also in Security class
+                classId: classes[3].id,
+                status: 'ACTIVE',
             },
         }),
     ]);
 
-    console.log(`🔗 Created ${assignments.length} user-class assignments`);
+    console.log('🔗 Created assignments:', assignments.length);
 
     console.log('✅ Database seeding completed successfully!');
     console.log('\n📊 Summary:');
-    console.log(`- Users: ${users.length}`);
-    console.log(`- Classes: ${classes.length}`);
-    console.log(`- Assignments: ${assignments.length}`);
-
-    // Display some statistics
-    const usersByRole = await prisma.user.groupBy({
-        by: ['role'],
-        _count: true,
-    });
-
-    console.log('\n👥 Users by role:');
-    usersByRole.forEach((group) => {
-        console.log(`- ${group.role}: ${group._count}`);
-    });
-
-    const classesWithAssignments = await prisma.class.findMany({
-        include: {
-            _count: {
-                select: { userAssignments: true },
-            },
-        },
-    });
-
-    console.log('\n🏫 Classes with assignment counts:');
-    classesWithAssignments.forEach((cls) => {
-        console.log(`- ${cls.name}: ${cls._count.userAssignments}/${cls.capacity}`);
-    });
+    console.log(`   Users: ${users.length}`);
+    console.log(`   Classes: ${classes.length}`);
+    console.log(`   Assignments: ${assignments.length}`);
+    console.log('\n🔑 Default login credentials:');
+    console.log('   Admin: admin@example.com / admin123');
+    console.log('   Engineer: engineer@example.com / engineer123');
+    console.log('   Intern: intern@example.com / intern123');
+    console.log('   User: john.doe@example.com / password123');
+    console.log('   User: jane.smith@example.com / password123');
 }
 
 main()

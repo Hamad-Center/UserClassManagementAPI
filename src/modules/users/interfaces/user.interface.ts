@@ -5,6 +5,12 @@ export enum UserRole {
   INTERN = 'INTERN',
 }
 
+export interface UserRoleAssignment {
+  id: number;
+  userId: number;
+  role: UserRole;
+}
+
 export interface User {
   id: number;
   email: string;
@@ -13,7 +19,7 @@ export interface User {
   lastName: string;
   phoneNumber?: string;
   department?: string;
-  roles: UserRole[];
+  roleAssignments: UserRoleAssignment[];
   createdAt: Date;
   updatedAt: Date;
 }

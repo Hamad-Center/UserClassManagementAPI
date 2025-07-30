@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, Inject } from "@nestjs/common";
 import { CreateClassDto } from "../dto/create-class.dto";
 import { IClass, IUserClassAssignment } from '../interfaces/class.interface'
 import { UpdateClassDto } from "../dto/update-class.dto";
@@ -8,146 +8,104 @@ import { BatchStatus, IBatchJob, IBatchResponse } from "../interfaces/batch.inte
 import { BatchProcessorService } from '../services/batch-processor.service'
 import { EventPublisherService } from "src/common/events/event-publisher.service";
 import { BatchAssignmentCompletedEvent, BatchAssignmentStartedEvent, UserAssignedToClassEvent } from "src/common/events/class-assignment.events";
-import { ConfigResourceTypes } from "@nestjs/microservices/external/kafka.interface";
 import { EVENT_PATTERNS } from "src/common/config/redis.config";
+import { IClassRepository } from '../interfaces/class-repository.interface';
+import { plainToClass } from 'class-transformer';
+import { ClassResponseDto } from '../dto/class-response.dto';
+import { AssignmentResponseDto } from '../dto/assignment-response.dto';
 
 @Injectable()
 export class ClassesService {
-    // in memory storage for demo purposes , will handle this in phase 3 when implementing repository )
-    private classes: IClass[] = [
-        {
-            id: 1,
-            name: "hand to hand combat sessions",
-            capacity: 25,
-            description: "this is hardcore training",
-            createdAt: new Date('2025-07-16'),
-            updatedAt: new Date('2025-07-16')
-        }
-    ];
-
-    private assignements: IUserClassAssignment[] = [];
     constructor(
+        @Inject('IClassRepository') private readonly classRepository: IClassRepository,
         private readonly batchProcessor: BatchProcessorService,
         private readonly eventPublisher: EventPublisherService,
     ) { }
 
-
-
-    async create(createClassDto: CreateClassDto): Promise<IClass> {
-        const highestId = this.classes.map(c => c.id).reduce((max, id) => Math.max(max, id), 0);
-        const newClass: IClass = {
-            id: highestId + 1,
-            ...createClassDto,
-            createdAt: new Date(),
-            updatedAt: new Date()
-        };
-        this.classes.push(newClass);
+    async create(createClassDto: CreateClassDto): Promise<ClassResponseDto> {
+        const newClass = await this.classRepository.create(createClassDto);
         console.log('Class created', { classId: newClass.id, context: 'ClassesService' });
-        return newClass;
+        return plainToClass(ClassResponseDto, newClass, { excludeExtraneousValues: true });
     }
 
-
-    async findAll(): Promise<IClass[]> {
-        return this.classes;
+    async findAll(): Promise<ClassResponseDto[]> {
+        const classes = await this.classRepository.findAll();
+        return plainToClass(ClassResponseDto, classes, { excludeExtraneousValues: true });
     }
 
-    async findOne(id: number): Promise<IClass> {
-        const classItem = this.classes.find(c => c.id === id);
-        if (!classItem) {
-            console.error(`the requested info ${classItem} isnot found`)
-            throw new NotFoundException(`class with id ${id} isnot found...`);
+    async findOne(id: number): Promise<ClassResponseDto> {
+        try {
+            const classData = await this.classRepository.findOne(id);
+            return plainToClass(ClassResponseDto, classData, { excludeExtraneousValues: true });
+        } catch (error) {
+            console.error(`the requested info ${id} is not found`, { context: 'ClassesService' });
+            throw new NotFoundException(`class with id ${id} is not found...`);
         }
-        return classItem;
     }
-    async update(id: number, updateClassDto: UpdateClassDto): Promise<IClass> {
-        const classItemIndex = this.classes.findIndex(c => c.id === id);
-        if (classItemIndex === -1) {
-            throw new NotFoundException(`class with id ${id} isnot found`);
-        }
 
-        this.classes[classItemIndex] = {
-            ...this.classes[classItemIndex],
-            ...updateClassDto,
-            updatedAt: new Date(),
-        };
-        return this.classes[classItemIndex];
+    async update(id: number, updateClassDto: UpdateClassDto): Promise<ClassResponseDto> {
+        try {
+            const updatedClass = await this.classRepository.update(id, updateClassDto);
+            return plainToClass(ClassResponseDto, updatedClass, { excludeExtraneousValues: true });
+        } catch (error) {
+            throw new NotFoundException(`class with id ${id} is not found`);
+        }
     }
 
     async delete(id: number): Promise<void> {
-        const classToBeDeleted = this.classes.findIndex(c => c.id === id);
-        if (classToBeDeleted === -1) {
-            throw new NotFoundException(`class with specific id ${id} is not found.`)
+        try {
+            await this.classRepository.delete(id);
+        } catch (error) {
+            throw new NotFoundException(`class with specific id ${id} is not found.`);
         }
-        this.classes.splice(classToBeDeleted, 1);
     }
 
     // this is the user class core business logic 
-    async assignUserToClass(assignmentDto: AssignUserToClassDto): Promise<IUserClassAssignment> {
+    async assignUserToClass(assignmentDto: AssignUserToClassDto): Promise<AssignmentResponseDto> {
+        try {
+            const assignment = await this.classRepository.assignUserToClass(assignmentDto);
 
-        const exitstingAssignment = this.assignements.find(
-            a => a.userId === assignmentDto.userId &&
-                a.classId === assignmentDto.classId &&
-                a.status === 'ACTIVE'
-        )
+            // publish an event after successful assignment
+            const correlationId =
+                `assgning_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        if (exitstingAssignment) {
-            throw new BadRequestException(`user with id ${exitstingAssignment.userId} is already assigned to this class`);
+            const event = new UserAssignedToClassEvent(
+                correlationId,
+                assignmentDto.userId,
+                assignmentDto.classId,
+                assignment.assignedAt
+            );
+
+            await this.eventPublisher.publishEvent(EVENT_PATTERNS.USER_ASSIGNED_TO_CLASS, event);
+
+            return plainToClass(AssignmentResponseDto, assignment, { excludeExtraneousValues: true });
+        } catch (error) {
+            if (error.message.includes('already assigned')) {
+                throw new BadRequestException(error.message);
+            }
+            if (error.message.includes('full capacity')) {
+                throw new BadRequestException(error.message);
+            }
+            throw error;
         }
-
-        // will check class capacity at first 
-        const classItem = await this.findOne(assignmentDto.classId);
-        const currentAssignments = this.assignements.filter(
-            a => a.classId === assignmentDto.classId && a.status === 'ACTIVE'
-        );
-
-        if (currentAssignments.length >= classItem.capacity) {
-            console.error('hmm, this is an already existing user!');
-            throw new BadRequestException(`class is at full capacity`)
-        }
-
-        const highestId = Math.max(...this.assignements.map(a => a.id), 0);
-
-        const assignment: IUserClassAssignment = {
-            id: highestId + 1,
-            userId: assignmentDto.userId,
-            classId: assignmentDto.classId,
-            assignedAt: new Date(),
-            status: assignmentDto.status || 'ACTIVE',
-        };
-        this.assignements.push(assignment);
-
-        // publish an event after successful assignment
-        const correlationId =
-            `assgning_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-        const event = new UserAssignedToClassEvent(
-            correlationId,
-            assignmentDto.userId,
-            assignmentDto.classId,
-            assignment.assignedAt
-        );
-
-        await this.eventPublisher.publishEvent(EVENT_PATTERNS.USER_ASSIGNED_TO_CLASS, event);
-
-        return assignment;
     }
 
     async unAssignUserFromClass(userId: number, classId: number): Promise<void> {
-        const assignmentIndex = this.assignements.findIndex(
-            a => a.userId === userId && a.classId === classId && a.status === 'ACTIVE'
-        )
-        if (assignmentIndex === -1) {
-            throw new NotFoundException('assignement not found')
+        try {
+            await this.classRepository.unAssignUserFromClass(userId, classId);
+        } catch (error) {
+            throw new NotFoundException('assignment not found');
         }
-        this.assignements[assignmentIndex].status = 'INACTIVE';
     }
 
-    async getUserAssignments(userId: number): Promise<IUserClassAssignment[]> {
-        return this.assignements.filter(a => a.userId === userId);
+    async getUserAssignments(userId: number): Promise<AssignmentResponseDto[]> {
+        const assignments = await this.classRepository.getUserAssignments(userId);
+        return plainToClass(AssignmentResponseDto, assignments, { excludeExtraneousValues: true });
     }
 
-    async getClassAssignments(classId: number): Promise<IUserClassAssignment[]> {
-        return this.assignements.filter(a => a.classId === classId);
+    async getClassAssignments(classId: number): Promise<AssignmentResponseDto[]> {
+        const assignments = await this.classRepository.getClassAssignments(classId);
+        return plainToClass(AssignmentResponseDto, assignments, { excludeExtraneousValues: true });
     }
 
     async processBatchAssignments(batchDto: BatchAssignUsersDto): Promise<IBatchResponse> {
@@ -172,7 +130,6 @@ export class ClassesService {
         );
         await this.eventPublisher.publishEvent(EVENT_PATTERNS.BATCH_ASSIGNMENT_STARTED, startedEvent);
         const job = this.batchProcessor.createBatchJob(batchId, batchDto.assignments.length);
-
 
         this.batchProcessor.processBatchInBackground(
             batchId,
@@ -204,13 +161,12 @@ export class ClassesService {
         const estimatedCompletion = new Date(Date.now() + estimatedMs).toString();
 
         return {
-            message: 'batch procssing started successfully and has been accepted for processing.',
+            message: 'batch processing started successfully and has been accepted for processing.',
             batchId,
             status: BatchStatus.PENDING,
             totalItems: batchDto.assignments.length,
             estimatedCompletionTime: estimatedCompletion
         };
-
     }
 
     async getBatchStatus(batchId: string): Promise<IBatchJob> {

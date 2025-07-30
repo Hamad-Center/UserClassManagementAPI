@@ -1,13 +1,16 @@
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
-// import { UserRole } from '@prisma/client';
-import { UserRole } from './user.interface';
+import { UserRole, UserRoleAssignment } from './user.interface';
+
 export interface IUser {
     id: number;
-    name: string;
+    firstName: string;
+    lastName: string;
     email: string;
-    // role: 'INTERN' | 'ADMIN' | 'ENGINEER';
-    role: UserRole;
+    password?: string;
+    phoneNumber?: string;
+    department?: string;
+    roleAssignments: UserRoleAssignment[];
     createdAt: Date;
     updatedAt: Date;
 }
